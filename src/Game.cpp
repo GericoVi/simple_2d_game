@@ -71,7 +71,10 @@ void Game::spawnPlayer()
     auto entity = m_entities.addEntity("player");
 
     // Spawn player by 'giving' (reinitialising) the transform component
-    entity->add<CTransform>(Vec2f(200.0f, 200.0f), Vec2f(5.0f, 5.0f), 0.0f);
+    entity->add<CTransform>(
+        Vec2f(m_window.getSize().x / 2, m_window.getSize().y / 2),
+        Vec2f(5.0f, 5.0f),
+        0.0f);
 
     // Give shape for rendering
     entity->add<CShape>(32.0f, 8, sf::Color(10, 10, 10), sf::Color(255, 0, 0), 4.0f);
@@ -184,6 +187,26 @@ void Game::sLifeSpan()
 void Game::sCollision()
 {
     float distanceBetweenCentres, collisionDistance;
+
+    // Enemy vs player collisions - reset score and respawn player
+    for (auto& vec : {m_entities.getEntities("big_enemy"), m_entities.getEntities("small_enemy")})
+    {
+        for (auto e : vec)
+        {
+            distanceBetweenCentres = player()->get<CTransform>().pos.dist(e->get<CTransform>().pos);
+            collisionDistance = player()->get<CCollision>().radius + e->get<CCollision>().radius;
+
+            if ( distanceBetweenCentres <= collisionDistance )
+            {
+                m_score = 0;
+                player()->destroy();
+                e->destroy();
+                spawnPlayer();
+            }
+        }
+    }
+
+    // Bullet collisions
     for (auto b : m_entities.getEntities("bullet"))
     {
         // split into big and small enemies??

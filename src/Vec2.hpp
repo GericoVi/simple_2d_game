@@ -75,10 +75,55 @@ public:
         y /= rhs.y;
     }
 
+    // Convenient math operators with scalars
+
+    Vec2 operator + (const T rhs) const
+    {
+        return Vec2(x+rhs, y+rhs);
+    }
+    Vec2 operator - (const T rhs) const
+    {
+        return Vec2(x-rhs, y-rhs);
+    }
+    Vec2 operator / (const T rhs) const
+    {
+        return Vec2(x/rhs, y/rhs);
+    }
+    Vec2 operator * (const T rhs) const
+    {
+        return Vec2(x*rhs, y*rhs);
+    }
+    void operator += (const T rhs)
+    {
+        x += rhs; y += rhs;
+    }
+    void operator -= (const T rhs)
+    {
+        x -= rhs; y -= rhs;
+    }
+    void operator *= (const T rhs)
+    {
+        x *= rhs; y *= rhs;
+    }
+    void operator /= (const T rhs)
+    {
+        x /= rhs; y /= rhs;
+    }
+
     // Distance between two vectors (i.e. points)
     float dist(const Vec2& rhs) const
     {
         return sqrtf( ((x-rhs.x)*(x-rhs.x)) + ((y-rhs.y)*(y-rhs.y)) );
+    }
+
+    // Normalise to unit vector
+    Vec2 unit_vector() const
+    {
+        T magnitude = sqrt(x*x + y*y);
+
+        if (magnitude == 0) { return Vec2(0,0); }
+
+        return Vec2(x/magnitude, y/magnitude);
     }
 
     // Convenient print

@@ -33,6 +33,8 @@ public:
         circle.setFillColor(fill);
         circle.setOutlineColor(outline);
         circle.setOutlineThickness(thickness);
+
+        // So that the position we set is the middle of the circle
         circle.setOrigin(radius, radius);
     }
 };

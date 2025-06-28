@@ -3,6 +3,8 @@
 #include "Entity.hpp"
 #include <map>
 #include <string>
+#include <iostream>
+#include <algorithm>
 
 // Convenience
 using EntityVec = std::vector<std::shared_ptr<Entity>>;
@@ -18,8 +20,18 @@ class EntityManager
 
     void removeDeadEntities(EntityVec& vec)
     {
-        // TODO: remove all dead entities from the input vector,
-        //       called by the update function
+        // Just construct new vector and move the ones that are active
+        // remove_if and erase is probably more performant but we would 
+        // only be copying pointers across here, not the actual entity data.
+        // Code is more readable and explicit this way I think.
+        EntityVec newVec;
+        for (auto entity : vec)
+        {
+            if (entity->isActive()) newVec.push_back(entity);
+        }
+
+        // No actual copying happens here, compiler should just do move assignment
+        vec = newVec;
     }
 
 public:
@@ -27,10 +39,6 @@ public:
 
     void update()
     {
-        // TODO: add entities from m_entitiesToAdd to the proper locations
-        //       - add them to the vector of all entities
-        //       - add them to the vector inside the map of the correct tag
-
         // remove dead entities from the vector of all entities
         removeDeadEntities(m_entities);
 
@@ -39,19 +47,33 @@ public:
         {
             removeDeadEntities(entityVec);
         }
+
+        // Add entities that are in the buffer and clear buffer
+        // Do here so that loops above have less unnecessary work
+        for (auto entity : m_entitiesToAdd)
+        {
+            m_entities.push_back(entity);
+
+            // If tag is not in the map, make a new one. Then append regardless
+            std::string tag = entity->tag();
+            if ( m_entityMap.find(tag) == m_entityMap.end() ) 
+            { 
+                m_entityMap[tag] = EntityVec(); 
+            }
+            m_entityMap[tag].push_back(entity);
+        }
+        m_entitiesToAdd.clear();
     }
 
     // Returns the pointer so we can then add components after we create a new entity
+    // We don't immediately add this to to the vector and map so that it can't interact
+    // with the systems yet until next frame.
     std::shared_ptr<Entity> addEntity(const std::string& tag)
     {
         // Make entity shared ptr, we can give it the latest id and then increment that
         auto entity = std::shared_ptr<Entity>(new Entity(m_totalEntities++, tag));
 
         m_entitiesToAdd.push_back(entity);
-
-        // If tag is not in the map, make a new one. Then append regardless
-        if ( m_entityMap.find(tag) == m_entityMap.end() ) { m_entityMap[tag] = EntityVec(); }
-        m_entityMap[tag].push_back(entity);
 
         return entity;
     }

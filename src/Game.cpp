@@ -105,8 +105,7 @@ void Game::sMovement()
 
     // sample, before vec2 properly implemented
     auto& transform = player()->get<CTransform>();
-    transform.pos.x += transform.velocity.x;
-    transform.pos.y += transform.velocity.y;
+    transform.pos += transform.velocity;
 }
 
 void Game::sLifeSpan()

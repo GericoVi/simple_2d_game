@@ -1,6 +1,13 @@
 #include "Game.h"
 
 #include <iostream>
+#include <math.h>
+
+// Get random float between 0 to 1.0
+float randFloat()
+{
+    return static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+}
 
 Game::Game(const std::string& config) { init(config); }
 
@@ -92,9 +99,40 @@ void Game::spawnEnemy()
 {
     // TODO: use m_enemyConfig when spawning, and be withing the bounds of window.
     auto entity = m_entities.addEntity("big_enemy");
-    entity->add<CTransform>(Vec2f(100.0f, 50.0f), Vec2f(2.0f, 1.0f), 0.0f);
-    entity->add<CShape>(16.0f, 4, sf::Color(10, 10, 10), sf::Color(0, 0, 255), 4.0f);
-    entity->add<CCollision>(16.0f);
+
+    int shapeRadius = 20;
+
+    // Spawnable region so it doesn't overlap with window
+    int min_x = shapeRadius, min_y = shapeRadius;
+    int max_x = m_window.getSize().x-shapeRadius;
+    int max_y = m_window.getSize().y-shapeRadius;
+
+    // Get random position
+    Vec2f randomPos(
+        static_cast<float>((rand() % (max_x-min_x)) + min_x),
+        static_cast<float>((rand() % (max_y-min_y)) + min_y)
+    );
+
+    // Get random angle for movement
+    float randAngleRads = randFloat() * PI*2;
+    Vec2f randVel(cosf(randAngleRads), sinf(randAngleRads));
+    // Scale to random speed
+    float min_speed = 1.0f, max_speed = 5.0f;
+    randVel *= (randFloat()*(max_speed-min_speed)+min_speed);
+
+    entity->add<CTransform>(randomPos, randVel, 0.0f);
+
+    // Get random num sides
+    int min_vertices = 3, max_vertices = 6;
+    int randNumVertices = (rand() % (max_vertices - min_vertices)) + min_vertices;
+
+    // Get random colour
+    sf::Color randFillColor(rand() % 255, rand() % 255, rand() % 255);
+
+    entity->add<CShape>(
+        static_cast<float>(shapeRadius), randNumVertices, randFillColor, sf::Color(255, 255, 255), 2.0f);
+    
+    entity->add<CCollision>(static_cast<float>(shapeRadius));
     // Score should be dependent on number of vertices
     entity->add<CScore>(4*100);
 
@@ -103,12 +141,43 @@ void Game::spawnEnemy()
 
 void Game::spawnSmallEnemies(EntityPtr entity)
 {
-    // TODO: spawn small enemeis at the location of the input entity
-
     // when we create the smaller enemies, we have to read the values of the original e
     // - spawn enemies equal to number of vertices
     // - small ones have same colour but half the size
     // - they're worth double points
+    int numVertices = entity->get<CShape>().circle.getPointCount();
+    
+    // Small enemies move away in equal angle increments
+    float angleIncrement = 2.f*PI / numVertices;
+    // Start from the angle of the original entity at the time
+    float angleCurrent = entity->get<CTransform>().angle;
+
+    for ( int n = 0; n < numVertices; n++ )
+    {
+        auto s_e = m_entities.addEntity("small_enemy");
+
+        Vec2f vel(cosf(angleCurrent), sinf(angleCurrent));
+        vel *= 2.5f;
+        
+        s_e->add<CTransform>(entity->get<CTransform>().pos, vel, 0.0f);
+
+        auto& shapeOrig = entity->get<CShape>();
+        s_e->add<CShape>(
+            shapeOrig.circle.getRadius() / 2,
+            numVertices,
+            shapeOrig.circle.getFillColor(),
+            shapeOrig.circle.getOutlineColor(),
+            shapeOrig.circle.getOutlineThickness()
+        );
+        
+        s_e->add<CCollision>(entity->get<CCollision>().radius / 2);
+        s_e->add<CScore>(entity->get<CScore>().score * 2);
+
+        // TODO: get lifespan from config
+        s_e->add<CLifespan>(60*1);
+
+        angleCurrent += angleIncrement;
+    }
 }
 
 void Game::spawnBullet(EntityPtr entity, const Vec2f& target)

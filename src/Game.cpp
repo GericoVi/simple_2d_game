@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <math.h>
+#include <fstream>
 
 // Get random float between 0 to 1.0
 float randFloat()
@@ -13,24 +14,73 @@ Game::Game(const std::string& config) { init(config); }
 
 void Game::init(const std::string& path)
 {
-    // TODO: read in config file here
-    //       place data into structs
+    // read in config file and place data into structs
+    std::ifstream fin("config.txt");
+    if (!fin.is_open())
+    {
+        std::cerr << "Config file not found!";
+        exit(-1);
+    }
+    std::string rowType, fontFile;
+    int wWidth, wHeight, frameLimit, fullscreen;
+    int fontSize, fontColorR, fontColorG, fontColorB;
+    while (fin >> rowType)
+    {
+        if (rowType == "Window")
+        {
+            fin >> wWidth >> wHeight >> frameLimit >> fullscreen;
+        }
+        else if (rowType == "Font")
+        {
+            fin >> fontFile >> fontSize >> fontColorR >> fontColorG >> fontColorB;
+        }
+        else if (rowType == "Player")
+        {
+            fin >> m_playerConfig.SR >> m_playerConfig.CR >> m_playerConfig.S
+            >> m_playerConfig.FR >> m_playerConfig.FG >> m_playerConfig.FB
+            >> m_playerConfig.OR >> m_playerConfig.OG >> m_playerConfig.OB
+            >> m_playerConfig.V;
+        }
+        else if (rowType == "Enemy")
+        {
+            fin >> m_enemyConfig.SR >> m_enemyConfig.CR
+            >> m_enemyConfig.SMIN >> m_enemyConfig.SMAX
+            >> m_enemyConfig.OR >> m_enemyConfig.OG >> m_enemyConfig.OB
+            >> m_enemyConfig.OT
+            >> m_enemyConfig.VMIN >> m_enemyConfig.VMAX
+            >> m_enemyConfig.L >> m_enemyConfig.SI;
+        }
+        else if (rowType == "Bullet")
+        {
+            fin >> m_bulletConfig.SR >> m_bulletConfig.CR >> m_bulletConfig.S
+            >> m_bulletConfig.FR >> m_bulletConfig.FG >> m_bulletConfig.FB
+            >> m_bulletConfig.OR >> m_bulletConfig.OG >> m_bulletConfig.OB
+            >> m_bulletConfig.OT >> m_bulletConfig.V >> m_bulletConfig.L;
+        }
+    }
+
+    std::cout << m_enemyConfig.SI;
 
     // setup window
-    m_window.create(sf::VideoMode(1280, 720), "Assignment 2");
-    m_window.setFramerateLimit(60);
+    m_window.create(
+        sf::VideoMode(wWidth, wHeight),
+        "Assignment 2",
+        fullscreen ? sf::Style::Fullscreen : sf::Style::Default
+    );
+    m_window.setFramerateLimit(frameLimit);
 
     ImGui::SFML::Init(m_window);
     ImGui::GetStyle().ScaleAllSizes(2.0f);
     ImGui::GetIO().FontGlobalScale = 2.0f;
 
-    if (!m_font.loadFromFile("fonts/04B_03__.TTF"))
+    if (!m_font.loadFromFile(fontFile))
     {
         std::cerr << "Could not load font!\n";
         exit(-1);
     }
 
-    m_scoreText = sf::Text("0", m_font, 50);
+    m_scoreText = sf::Text("0", m_font, fontSize);
+    m_scoreText.setColor(sf::Color(fontColorR, fontColorG, fontColorB));
 
     spawnPlayer();
 }
@@ -80,14 +130,19 @@ void Game::spawnPlayer()
     // Spawn player by 'giving' (reinitialising) the transform component
     entity->add<CTransform>(
         Vec2f(m_window.getSize().x / 2, m_window.getSize().y / 2),
-        Vec2f(5.0f, 5.0f),
+        Vec2f(0.f, 0.f),
         0.0f);
 
     // Give shape for rendering
-    entity->add<CShape>(32.0f, 8, sf::Color(10, 10, 10), sf::Color(255, 0, 0), 4.0f);
+    entity->add<CShape>(
+        static_cast<float>(m_playerConfig.SR),
+        m_playerConfig.V,
+        sf::Color(m_playerConfig.FR, m_playerConfig.FG, m_playerConfig.FB),
+        sf::Color(m_playerConfig.OR, m_playerConfig.OG, m_playerConfig.OB),
+        4.0f);
 
     // For now, make collision radius same as shape radius
-    entity->add<CCollision>(32.0f);
+    entity->add<CCollision>(static_cast<float>(m_playerConfig.CR));
 
     // For controls
     entity->add<CInput>();
@@ -97,15 +152,12 @@ void Game::spawnPlayer()
 
 void Game::spawnEnemy()
 {
-    // TODO: use m_enemyConfig when spawning, and be withing the bounds of window.
     auto entity = m_entities.addEntity("big_enemy");
 
-    int shapeRadius = 20;
-
     // Spawnable region so it doesn't overlap with window
-    int min_x = shapeRadius, min_y = shapeRadius;
-    int max_x = m_window.getSize().x-shapeRadius;
-    int max_y = m_window.getSize().y-shapeRadius;
+    int min_x = m_enemyConfig.SR, min_y = m_enemyConfig.SR;
+    int max_x = m_window.getSize().x-m_enemyConfig.SR;
+    int max_y = m_window.getSize().y-m_enemyConfig.SR;
 
     // Get random position
     Vec2f randomPos(
@@ -117,22 +169,28 @@ void Game::spawnEnemy()
     float randAngleRads = randFloat() * PI*2;
     Vec2f randVel(cosf(randAngleRads), sinf(randAngleRads));
     // Scale to random speed
-    float min_speed = 1.0f, max_speed = 5.0f;
-    randVel *= (randFloat()*(max_speed-min_speed)+min_speed);
+    randVel *= (
+        randFloat()*(m_enemyConfig.SMAX-m_enemyConfig.SMIN)
+        + m_enemyConfig.SMIN);
 
     entity->add<CTransform>(randomPos, randVel, 0.0f);
 
     // Get random num sides
-    int min_vertices = 3, max_vertices = 6;
-    int randNumVertices = (rand() % (max_vertices - min_vertices)) + min_vertices;
+    int randNumVertices = 
+        (rand() % (m_enemyConfig.VMAX - m_enemyConfig.VMIN)) 
+        + m_enemyConfig.VMIN;
 
     // Get random colour
     sf::Color randFillColor(rand() % 255, rand() % 255, rand() % 255);
 
     entity->add<CShape>(
-        static_cast<float>(shapeRadius), randNumVertices, randFillColor, sf::Color(255, 255, 255), 2.0f);
+        static_cast<float>(m_enemyConfig.SR),
+        randNumVertices,
+        randFillColor,
+        sf::Color(m_enemyConfig.OR, m_enemyConfig.OG, m_enemyConfig.OB),
+        static_cast<float>(m_enemyConfig.OT));
     
-    entity->add<CCollision>(static_cast<float>(shapeRadius));
+    entity->add<CCollision>(static_cast<float>(m_enemyConfig.CR));
     // Score should be dependent on number of vertices
     entity->add<CScore>(4*100);
 
@@ -174,7 +232,7 @@ void Game::spawnSmallEnemies(EntityPtr entity)
         s_e->add<CScore>(entity->get<CScore>().score * 2);
 
         // TODO: get lifespan from config
-        s_e->add<CLifespan>(60*1);
+        s_e->add<CLifespan>(60*m_enemyConfig.L);
 
         angleCurrent += angleIncrement;
     }
@@ -191,11 +249,21 @@ void Game::spawnBullet(EntityPtr entity, const Vec2f& target)
 
     auto b_entity = m_entities.addEntity("bullet");
     // Scale to velocity using config and spawn from entity (player)
-    b_entity->add<CTransform>(entity->get<CTransform>().pos, direction*10.0f, 0.0f);
+    b_entity->add<CTransform>(
+        entity->get<CTransform>().pos,
+        direction * m_bulletConfig.S,
+        0.0f);
+
     // Bullets are just circles, so just do enough points to look like one
-    b_entity->add<CShape>(2.0f, 32, sf::Color(200, 200, 200), sf::Color(200, 200, 200), 1.0f);
-    b_entity->add<CCollision>(2.0f);
-    b_entity->add<CLifespan>(60*1);
+    b_entity->add<CShape>(
+        static_cast<float>(m_bulletConfig.SR),
+        m_bulletConfig.V,
+        sf::Color(m_bulletConfig.FR, m_bulletConfig.FG, m_bulletConfig.FB),
+        sf::Color(m_bulletConfig.OR, m_bulletConfig.OG, m_bulletConfig.OB),
+        static_cast<float>(m_bulletConfig.OT));
+
+    b_entity->add<CCollision>(static_cast<float>(m_bulletConfig.CR));
+    b_entity->add<CLifespan>(60*m_bulletConfig.L);
 }
 
 void Game::spawnSpecial(EntityPtr entity)
@@ -215,8 +283,7 @@ void Game::sMovement()
 
     // Normalise to unit vector then scale with desired speed magnitued in config
     // So we can avoid side straffing speed up
-    float speed = 5.0f;
-    player()->get<CTransform>().velocity = playerDirection.unit_vector() * speed;
+    player()->get<CTransform>().velocity = playerDirection.unit_vector() * m_playerConfig.S;
 
     // Move based on velocity
     for (auto entity : m_entities.getEntities())
@@ -362,7 +429,10 @@ void Game::sEnemySpawner()
 {
     // TODO: spawn enemy at appropriate times
     // Should be related to m_enemyConfig.SP, right now just every 2s
-    if ( (m_currentFrame == 0) || ((m_currentFrame-m_lastEnemySpawnTime) >= 60*2) )
+    if ( 
+        (m_currentFrame == 0) ||
+        ((m_currentFrame-m_lastEnemySpawnTime) >= 60*m_enemyConfig.SI) 
+    )
     {
         spawnEnemy();
     }

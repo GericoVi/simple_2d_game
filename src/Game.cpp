@@ -123,8 +123,6 @@ void Game::setPaused(bool paused)
 
 void Game::spawnPlayer()
 {
-    // TODO: add all properties of the player from the config
-
     auto entity = m_entities.addEntity("player");
 
     // Spawn player by 'giving' (reinitialising) the transform component
@@ -146,8 +144,7 @@ void Game::spawnPlayer()
 
     // For controls
     entity->add<CInput>();
-
-    std::cout << "Player spawned at " << entity->get<CTransform>().pos << std::endl;
+    // std::cout << "Player spawned at " << entity->get<CTransform>().pos << std::endl;
 }
 
 void Game::spawnEnemy()
@@ -240,12 +237,10 @@ void Game::spawnSmallEnemies(EntityPtr entity)
 
 void Game::spawnBullet(EntityPtr entity, const Vec2f& target)
 {
-    // TODO: - bullet speed is given in config as scalar
-
     // Get unit direction based on target and origin
     Vec2f direction = (target - entity->get<CTransform>().pos).unit_vector();
-    std::cout << "target: " << target << " origin: " << entity->get<CTransform>().pos 
-    << " direction: " << direction << std::endl;
+    // std::cout << "target: " << target << " origin: " << entity->get<CTransform>().pos 
+    // << " direction: " << direction << std::endl;
 
     auto b_entity = m_entities.addEntity("bullet");
     // Scale to velocity using config and spawn from entity (player)
@@ -427,8 +422,6 @@ void Game::sCollision()
 
 void Game::sEnemySpawner()
 {
-    // TODO: spawn enemy at appropriate times
-    // Should be related to m_enemyConfig.SP, right now just every 2s
     if ( 
         (m_currentFrame == 0) ||
         ((m_currentFrame-m_lastEnemySpawnTime) >= 60*m_enemyConfig.SI) 
@@ -496,28 +489,27 @@ void Game::sUserInput()
         
         if (event.type == sf::Event::KeyPressed)
         {
-            // TODO do all input keys
             switch (event.key.code)
             {
                 case sf::Keyboard::W:
-                    std::cout << "W Key Pressed\n";
+                    // std::cout << "W Key Pressed\n";
                     player()->get<CInput>().up = true;
                     break;
                 case sf::Keyboard::A:
-                    std::cout << "A Key Pressed\n";
+                    // std::cout << "A Key Pressed\n";
                     player()->get<CInput>().left = true;
                     break;
                 case sf::Keyboard::S:
-                    std::cout << "S Key Pressed\n";
+                    // std::cout << "S Key Pressed\n";
                     player()->get<CInput>().down = true;
                     break;
                 case sf::Keyboard::D:
-                    std::cout << "D Key Pressed\n";
+                    // std::cout << "D Key Pressed\n";
                     player()->get<CInput>().right = true;
                     break;
 
                 case sf::Keyboard::P:
-                    std::cout << "P Key Pressed\n";
+                    // std::cout << "P Key Pressed\n";
                     setPaused(!m_paused);
                     break;
 
@@ -526,23 +518,22 @@ void Game::sUserInput()
         }
         if (event.type == sf::Event::KeyReleased)
         {
-            // TODO do all input keys
             switch (event.key.code)
             {
                 case sf::Keyboard::W:
-                    std::cout << "W Key Released\n";
+                    // std::cout << "W Key Released\n";
                     player()->get<CInput>().up = false;
                     break;
                 case sf::Keyboard::A:
-                    std::cout << "A Key Released\n";
+                    // std::cout << "A Key Released\n";
                     player()->get<CInput>().left = false;
                     break;
                 case sf::Keyboard::S:
-                    std::cout << "S Key Released\n";
+                    // std::cout << "S Key Released\n";
                     player()->get<CInput>().down = false;
                     break;
                 case sf::Keyboard::D:
-                    std::cout << "D Key Released\n";
+                    // std::cout << "D Key Released\n";
                     player()->get<CInput>().right = false;
                     break;
                 default: break;
@@ -560,7 +551,7 @@ void Game::sUserInput()
             // Shoot bullet
             if (event.mouseButton.button == sf::Mouse::Left)
             {
-                std::cout << "Left Mouse Button Clicked at (" << event.mouseButton.x << "," << event.mouseButton.y << ")" << std::endl;
+                // std::cout << "Left Mouse Button Clicked at (" << event.mouseButton.x << "," << event.mouseButton.y << ")" << std::endl;
                 spawnBullet(player(), Vec2f(event.mouseButton.x, event.mouseButton.y));
             }
 

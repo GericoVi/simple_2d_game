@@ -317,68 +317,95 @@ void Game::sLifeSpan()
 
 void Game::sCollision()
 {
+    auto pairwiseCollision = [this](EntityPtr entityA, EntityPtr entityB)
+{
     float distanceBetweenCentres, collisionDistance;
 
+        distanceBetweenCentres = entityA->get<CTransform>().pos.dist(entityB->get<CTransform>().pos);
+        collisionDistance = entityA->get<CCollision>().radius + entityB->get<CCollision>().radius;
+
+        if ( distanceBetweenCentres <= collisionDistance ) return true;
+
+        return false;
+    };
+
+    auto collideUpdate = [](EntityPtr entity)
+    {
+        auto& eCollision = entity->get<CCollision>();
+        eCollision.collisionsRemaining -= 1;
+        
+        if (eCollision.collisionsRemaining == 0) return true;
+        return false;
+    };
+
     // Enemy vs player collisions - reset score and respawn player
+    // Conveniently loops through all enemy tags
     for (auto& vec : {m_entities.getEntities("big_enemy"), m_entities.getEntities("small_enemy")})
     {
         for (auto e : vec)
         {
-            distanceBetweenCentres = player()->get<CTransform>().pos.dist(e->get<CTransform>().pos);
-            collisionDistance = player()->get<CCollision>().radius + e->get<CCollision>().radius;
-
-            if ( distanceBetweenCentres <= collisionDistance )
+            if (pairwiseCollision(player(), e))
             {
+                if (collideUpdate(player()))
+                {
+                    player()->destroy();
+                    // Make sure to reset score and respawn player
                 m_score = 0;
-                player()->destroy();
+                    spawnPlayer();
+                }
+                if (collideUpdate(e))
+                {
                 e->destroy();
-                spawnPlayer();
+                }
             }
         }
     }
 
     // Bullet collisions
-    for (auto b : m_entities.getEntities("bullet"))
+    // We can loops through both normal bullets and specials
+    for (auto& vec : {m_entities.getEntities("bullet"), m_entities.getEntities("special")})
     {
-        // split into big and small enemies??
+        for (auto b : vec)
+        {
         for (auto b_e : m_entities.getEntities("big_enemy"))
         {
-            distanceBetweenCentres = b->get<CTransform>().pos.dist(b_e->get<CTransform>().pos);
-            collisionDistance = b->get<CCollision>().radius + b_e->get<CCollision>().radius;
-
-            if ( distanceBetweenCentres <= collisionDistance )
-            {
-                // update score
+                if (pairwiseCollision(b, b_e))
+                {
+                    if (collideUpdate(b_e))
+                    {
+                        // explode enemy and add to score
+                        b_e->destroy();
+                        spawnSmallEnemies(b_e);
                 m_score += b_e->get<CScore>().score;
-
-                // explode enemy
-                spawnSmallEnemies(b_e);
-                b_e->destroy();
-
-                // Also destroy the bullet and move on
+                    }
+                    if (collideUpdate(b))
+                    {
                 b->destroy();
                 break;
+                    }
             }
         }
 
         // because we're doing 2 separate loops, check if this bullet hasn't
-        // alreayd hit something
+            // already hit something
         if (!b->isActive()) continue;
 
         for (auto s_e : m_entities.getEntities("small_enemy"))
         {
-            distanceBetweenCentres = b->get<CTransform>().pos.dist(s_e->get<CTransform>().pos);
-            collisionDistance = b->get<CCollision>().radius + s_e->get<CCollision>().radius;
-
-            if ( distanceBetweenCentres <= collisionDistance )
+                if (pairwiseCollision(b, s_e))
+                {
+                    if (collideUpdate(s_e))
             {
-                // update score and destroy
+                        // add to score
+                        s_e->destroy();
                 m_score += s_e->get<CScore>().score;
-                s_e->destroy();
-
-                // Also destroy the bullet and move on
+                    }
+                    if (collideUpdate(b))
+                    {
                 b->destroy();
                 break;
+                    }
+                }
             }
         }
     }

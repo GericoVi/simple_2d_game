@@ -43,9 +43,12 @@ class CCollision : public Component
 {
 public:
     float radius = 0;
+    int collisionsRemaining = 1;
 
     CCollision() = default;
-    CCollision(float r) : radius(r) { }
+    CCollision(float r) : radius(r) {}
+    CCollision(float r, int collisionsTotal)
+    : radius(r), collisionsRemaining(collisionsTotal) {}
 };
 
 class CScore : public Component

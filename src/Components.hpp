@@ -85,9 +85,10 @@ public:
 class CSpecial : public Component
 {
 public:
-    int cooldown    = 0;
-    int remaining   = 0;
+    int cooldownTotal;
+    int cooldownRemaining       = 0;
 
     CSpecial() = default;
-    CSpecial(int cooldownVal) : cooldown(cooldownVal) {}
+    CSpecial(int cooldownVal) 
+    : cooldownTotal(cooldownVal) {}
 };

@@ -12,6 +12,7 @@
 struct PlayerConfig { int SR, CR, FR, FG, FB, OR, OG, OB, OT, V; float S; };
 struct EnemyConfig  { int SR, CR, OR, OG, OB, OT, VMIN, VMAX, L, SI; float SMIN, SMAX; };
 struct BulletConfig { int SR, CR, FR, FG, FB, OR, OG, OB, OT, V, L; float S; };
+struct SpecialConfig { int SR, CR, FR, FG, FB, OR, OG, OB, OT, V, L, CL, CD; float S; };
 
 using EntityPtr = std::shared_ptr<Entity>;
 
@@ -24,6 +25,7 @@ class Game
     PlayerConfig        m_playerConfig;
     EnemyConfig         m_enemyConfig;
     BulletConfig        m_bulletConfig;
+    SpecialConfig       m_specialConfig;
     sf::Clock           m_deltaClock;
     int                 m_score = 0;
     int                 m_currentFrame = 0;
@@ -35,6 +37,7 @@ class Game
     bool                m_MovementOn = true;
     bool                m_CollisionOn = true;
     bool                m_UserInputOn = true;
+    bool                m_CooldownsOn = true;
 
     void init(const std::string& config);   // initialise game state with config file
     void setPaused(bool paused);            // pause game
@@ -44,6 +47,7 @@ class Game
     void sLifeSpan();
     void sCollision();
     void sEnemySpawner();
+    void sCooldowns();
     void sGUI();
     void sRender();
     void sUserInput();
@@ -60,8 +64,8 @@ class Game
     // Spawns bullet from given entity towards mouse location
     void spawnBullet(EntityPtr entity, const Vec2f& mousePos);
     
-    // Special weapon that spawns multiple projectiles and...
-    void spawnSpecial(EntityPtr entity);
+    // Spawns faster and larger bullet with much longer lifespan and can hit multiple enemies
+    void spawnSpecial(EntityPtr entity, const Vec2f& mousePos);
 
     // Convenient helper function
     EntityPtr player();

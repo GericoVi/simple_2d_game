@@ -57,9 +57,15 @@ void Game::init(const std::string& path)
             >> m_bulletConfig.OR >> m_bulletConfig.OG >> m_bulletConfig.OB
             >> m_bulletConfig.OT >> m_bulletConfig.V >> m_bulletConfig.L;
         }
+        else if (rowType == "Special")
+        {
+            fin >> m_specialConfig.SR >> m_specialConfig.CR >> m_specialConfig.S
+            >> m_specialConfig.FR >> m_specialConfig.FG >> m_specialConfig.FB
+            >> m_specialConfig.OR >> m_specialConfig.OG >> m_specialConfig.OB
+            >> m_specialConfig.OT >> m_specialConfig.V >> m_specialConfig.L
+            >> m_specialConfig.CL >> m_specialConfig.CD;
+        }
     }
-
-    std::cout << m_enemyConfig.SI;
 
     // setup window
     m_window.create(
@@ -102,12 +108,13 @@ void Game::run()
         // run systems
         if (!m_paused)
         {
-            if (m_LifeSpanOn) sLifeSpan();
-            if (m_EnemySpawnerOn) sEnemySpawner();
-            if (m_MovementOn) sMovement();
+            sLifeSpan();
+            sEnemySpawner();
+            sMovement();
+            sCooldowns();
         }
-        if (m_CollisionOn) sCollision();
-        if (m_UserInputOn) sUserInput();
+        sCollision();
+        sUserInput();
         sGUI();
         sRender();
 
@@ -144,6 +151,9 @@ void Game::spawnPlayer()
 
     // For controls
     entity->add<CInput>();
+
+    // Tracking cooldown
+    entity->add<CSpecial>(m_specialConfig.CD*60);
     // std::cout << "Player spawned at " << entity->get<CTransform>().pos << std::endl;
 }
 
@@ -261,13 +271,38 @@ void Game::spawnBullet(EntityPtr entity, const Vec2f& target)
     b_entity->add<CLifespan>(60*m_bulletConfig.L);
 }
 
-void Game::spawnSpecial(EntityPtr entity)
+void Game::spawnSpecial(EntityPtr entity, const Vec2f& target)
 {
-    // TODO
+    // If it's still on cooldown, do nothing
+    if (entity->get<CSpecial>().cooldownRemaining > 0) return;
+
+    // Get unit direction based on target and origin
+    Vec2f direction = (target - entity->get<CTransform>().pos).unit_vector();
+
+    auto b_entity = m_entities.addEntity("special");
+    // Scale to velocity using config and spawn from entity (player)
+    b_entity->add<CTransform>(
+        entity->get<CTransform>().pos,
+        direction * m_specialConfig.S,
+        0.0f);
+
+    b_entity->add<CShape>(
+        static_cast<float>(m_specialConfig.SR),
+        m_specialConfig.V,
+        sf::Color(m_specialConfig.FR, m_specialConfig.FG, m_specialConfig.FB),
+        sf::Color(m_specialConfig.OR, m_specialConfig.OG, m_specialConfig.OB),
+        static_cast<float>(m_specialConfig.OT));
+
+    b_entity->add<CCollision>(static_cast<float>(m_specialConfig.CR), m_specialConfig.CL);
+    b_entity->add<CLifespan>(60*m_specialConfig.L);
+
+    entity->get<CSpecial>().cooldownRemaining = entity->get<CSpecial>().cooldownTotal;
 }
 
 void Game::sMovement()
 {
+    if (!m_MovementOn) return;
+
     // Update velocity of player based on current input.
     // First get 'activations' to get direction 
     Vec2f playerDirection;
@@ -289,6 +324,8 @@ void Game::sMovement()
 
 void Game::sLifeSpan()
 {
+    if (!m_LifeSpanOn) return;
+
     for (auto entity : m_entities.getEntities())
     {
         auto& lifespan = entity->get<CLifespan>();
@@ -317,9 +354,11 @@ void Game::sLifeSpan()
 
 void Game::sCollision()
 {
+    if (!m_CollisionOn) return;
+
     auto pairwiseCollision = [this](EntityPtr entityA, EntityPtr entityB)
-{
-    float distanceBetweenCentres, collisionDistance;
+    {
+        float distanceBetweenCentres, collisionDistance;
 
         distanceBetweenCentres = entityA->get<CTransform>().pos.dist(entityB->get<CTransform>().pos);
         collisionDistance = entityA->get<CCollision>().radius + entityB->get<CCollision>().radius;
@@ -350,12 +389,12 @@ void Game::sCollision()
                 {
                     player()->destroy();
                     // Make sure to reset score and respawn player
-                m_score = 0;
+                    m_score = 0;
                     spawnPlayer();
                 }
                 if (collideUpdate(e))
                 {
-                e->destroy();
+                    e->destroy();
                 }
             }
         }
@@ -367,8 +406,8 @@ void Game::sCollision()
     {
         for (auto b : vec)
         {
-        for (auto b_e : m_entities.getEntities("big_enemy"))
-        {
+            for (auto b_e : m_entities.getEntities("big_enemy"))
+            {
                 if (pairwiseCollision(b, b_e))
                 {
                     if (collideUpdate(b_e))
@@ -376,34 +415,34 @@ void Game::sCollision()
                         // explode enemy and add to score
                         b_e->destroy();
                         spawnSmallEnemies(b_e);
-                m_score += b_e->get<CScore>().score;
+                        m_score += b_e->get<CScore>().score;
                     }
                     if (collideUpdate(b))
                     {
-                b->destroy();
-                break;
+                        b->destroy();
+                        break;
                     }
+                }
             }
-        }
 
-        // because we're doing 2 separate loops, check if this bullet hasn't
+            // because we're doing 2 separate loops, check if this bullet hasn't
             // already hit something
-        if (!b->isActive()) continue;
+            if (!b->isActive()) continue;
 
-        for (auto s_e : m_entities.getEntities("small_enemy"))
-        {
+            for (auto s_e : m_entities.getEntities("small_enemy"))
+            {
                 if (pairwiseCollision(b, s_e))
                 {
                     if (collideUpdate(s_e))
-            {
+                    {
                         // add to score
                         s_e->destroy();
-                m_score += s_e->get<CScore>().score;
+                        m_score += s_e->get<CScore>().score;
                     }
                     if (collideUpdate(b))
                     {
-                b->destroy();
-                break;
+                        b->destroy();
+                        break;
                     }
                 }
             }
@@ -449,12 +488,40 @@ void Game::sCollision()
 
 void Game::sEnemySpawner()
 {
+    if (!m_EnemySpawnerOn) return;
+
     if ( 
         (m_currentFrame == 0) ||
         ((m_currentFrame-m_lastEnemySpawnTime) >= 60*m_enemyConfig.SI) 
     )
     {
         spawnEnemy();
+    }
+}
+
+void Game::sCooldowns()
+{
+    auto& special = player()->get<CSpecial>();
+    if (!m_CooldownsOn) special.cooldownRemaining = 0;
+    
+    // Change player visuals based on cooldown
+    if (special.cooldownRemaining > 0) {
+        special.cooldownRemaining -= 1;
+
+        // Update alpha channel as cooldown ticks down
+        // Not all the way up, so that we see a visual step change when cooldown is done
+        int alpha = int(float(special.cooldownTotal-special.cooldownRemaining)*100 
+                    / float(special.cooldownTotal));
+
+        player()->get<CShape>().circle.setFillColor(
+            sf::Color(m_playerConfig.FR, m_playerConfig.FG, m_playerConfig.FB, alpha)
+        );
+    }
+    else
+    {
+        player()->get<CShape>().circle.setFillColor(
+            sf::Color(m_playerConfig.FR, m_playerConfig.FG, m_playerConfig.FB)
+        );
     }
 }
 
@@ -547,6 +614,8 @@ void Game::sRender()
 
 void Game::sUserInput()
 {
+    if (!m_UserInputOn) return;
+
     sf::Event event;
     while (m_window.pollEvent(event))
     {
@@ -625,7 +694,8 @@ void Game::sUserInput()
             // Do special
             if (event.mouseButton.button == sf::Mouse::Right)
             {
-                std::cout << "Right Mouse Button Clicked at (" << event.mouseButton.x << "," << event.mouseButton.y << ")" << std::endl;
+                // std::cout << "Right Mouse Button Clicked at (" << event.mouseButton.x << "," << event.mouseButton.y << ")" << std::endl;
+                spawnSpecial(player(), Vec2f(event.mouseButton.x, event.mouseButton.y));
             }
         }
     }

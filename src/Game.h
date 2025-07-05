@@ -30,6 +30,11 @@ class Game
     int                 m_lastEnemySpawnTime = 0;
     bool                m_paused = false;
     bool                m_running = true;
+    bool                m_LifeSpanOn = true;
+    bool                m_EnemySpawnerOn = true;
+    bool                m_MovementOn = true;
+    bool                m_CollisionOn = true;
+    bool                m_UserInputOn = true;
 
     void init(const std::string& config);   // initialise game state with config file
     void setPaused(bool paused);            // pause game

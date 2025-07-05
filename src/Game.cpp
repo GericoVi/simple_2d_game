@@ -70,8 +70,8 @@ void Game::init(const std::string& path)
     m_window.setFramerateLimit(frameLimit);
 
     ImGui::SFML::Init(m_window);
-    ImGui::GetStyle().ScaleAllSizes(2.0f);
-    ImGui::GetIO().FontGlobalScale = 2.0f;
+    ImGui::GetStyle().ScaleAllSizes(1.0f);
+    ImGui::GetIO().FontGlobalScale = 1.0f;
 
     if (!m_font.loadFromFile(fontFile))
     {
@@ -102,12 +102,12 @@ void Game::run()
         // run systems
         if (!m_paused)
         {
-            sLifeSpan();
-            sEnemySpawner();
-            sMovement();
+            if (m_LifeSpanOn) sLifeSpan();
+            if (m_EnemySpawnerOn) sEnemySpawner();
+            if (m_MovementOn) sMovement();
         }
-        sCollision();
-        sUserInput();
+        if (m_CollisionOn) sCollision();
+        if (m_UserInputOn) sUserInput();
         sGUI();
         sRender();
 
@@ -434,7 +434,47 @@ void Game::sEnemySpawner()
 void Game::sGUI()
 {
     ImGui::Begin("Geometry Wars");
-    ImGui::Text("Stuff Goes Here");
+
+    ImGui::Text("System Toggles");
+    ImGui::Checkbox("Movement Toggle", &m_MovementOn);
+    ImGui::Checkbox("Enemy Spawner Toggle", &m_EnemySpawnerOn);
+    ImGui::Checkbox("Collision Toggle", &m_CollisionOn);
+    ImGui::Checkbox("Life Span Toggle", &m_LifeSpanOn);
+    ImGui::Checkbox("User Input Toggle", &m_UserInputOn);
+    ImGui::Separator();
+
+    ImGui::BeginListBox("Entities");
+    for (const auto& e : m_entities.getEntities())
+    {
+        if (ImGui::Button(
+            ("Destroy###"+std::to_string(e->id())).c_str(), {0,0})) 
+        {
+            e->destroy();
+
+            // Need to make sure to immediately respawn player if it gets
+            // manually destroyed here. Or else we seg fault and crash
+            if (e->tag() == "player") 
+            {
+                spawnPlayer();
+                // Let's reset the score too
+                m_score = 0;
+            }
+
+        }
+        ImGui::SameLine();
+
+        auto position = e->get<CTransform>().pos;
+        ImGui::Text(
+            "%04d: %s at [%.0f,%.0f]",
+            e->id(), e->tag().c_str(), position.x, position.y);
+    }
+    ImGui::EndListBox();
+    ImGui::Separator();
+
+    ImGui::Text("Enemy Spawning");
+    ImGui::SliderInt("Spawn Interval (s)", &m_enemyConfig.SI, 0, 10);
+    if (ImGui::Button("Spawn One")) spawnEnemy();
+
     ImGui::End();
 }
 

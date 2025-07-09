@@ -1,7 +1,30 @@
+# Simple 2D Game
+Learning game programming with C++ from COMP4300 Game Programming course found on youtube - https://youtu.be/-ugbLQlw_VM?si=0Ri8qIUXbwopQyPa
+
 ![screenshot of game](screenshot.png)
 
+## Build from source
+Clone git repository with the dependencies included as submodules:
+
+`git clone --recursive https://github.com/GericoVi/simple_2d_game.git`
+
+Build using cmake:
+
+```
+cd simple_2d_game
+mkdir build
+cd build
+
+cmake ..
+cmake --build .
+```
+
+Otherwise you can manually install dependencies and link:
+
+[SFML](https://github.com/SFML/SFML), [ImGUI](https://github.com/ocornut/imgui), [ImGUI-SFML](https://github.com/SFML/imgui-sfml)
+
 # Program Specification
-From COMP4300 Game Programming course found on youtube - https://youtu.be/-ugbLQlw_VM?si=0Ri8qIUXbwopQyPa
+From assignment specification in course/video.
 
 ## Player
 - Represented by a shape which is defined in the config file

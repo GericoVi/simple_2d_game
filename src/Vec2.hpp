@@ -1,7 +1,6 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
-#include <math.h>
 #include <ostream>
 
 template <typename T>
@@ -113,13 +112,13 @@ public:
     // Distance between two vectors (i.e. points)
     float dist(const Vec2& rhs) const
     {
-        return sqrtf( ((x-rhs.x)*(x-rhs.x)) + ((y-rhs.y)*(y-rhs.y)) );
+        return std::sqrt( ((x-rhs.x)*(x-rhs.x)) + ((y-rhs.y)*(y-rhs.y)) );
     }
 
     // Normalise to unit vector
     Vec2 unit_vector() const
     {
-        T magnitude = sqrt(x*x + y*y);
+        T magnitude = std::sqrt(x*x + y*y);
 
         if (magnitude == 0) { return Vec2(0,0); }
 

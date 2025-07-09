@@ -1,7 +1,6 @@
 #include "Game.h"
 
 #include <iostream>
-#include <math.h>
 #include <fstream>
 
 // Get random float between 0 to 1.0
@@ -174,7 +173,7 @@ void Game::spawnEnemy()
 
     // Get random angle for movement
     float randAngleRads = randFloat() * PI*2;
-    Vec2f randVel(cosf(randAngleRads), sinf(randAngleRads));
+    Vec2f randVel(std::cos(randAngleRads), std::sin(randAngleRads));
     // Scale to random speed
     randVel *= (
         randFloat()*(m_enemyConfig.SMAX-m_enemyConfig.SMIN)
@@ -221,7 +220,7 @@ void Game::spawnSmallEnemies(EntityPtr entity)
     {
         auto s_e = m_entities.addEntity("small_enemy");
 
-        Vec2f vel(cosf(angleCurrent), sinf(angleCurrent));
+        Vec2f vel(std::cos(angleCurrent), std::sin(angleCurrent));
         vel *= 2.5f;
         
         s_e->add<CTransform>(entity->get<CTransform>().pos, vel, 0.0f);
